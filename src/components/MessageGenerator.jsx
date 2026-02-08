@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Send, Download, Heart } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import domtoimage from 'dom-to-image-more';
 
 const messages = [
     "You're the reason my world is so bright. I love you, {name}!",
@@ -40,27 +40,25 @@ const MessageGenerator = () => {
         setIsDownloading(true);
 
         try {
-            // Give a bit more time for any entry animations to settle
-            await new Promise(resolve => setTimeout(resolve, 300));
+            // Ensure the element is fully rendered and animations have settled
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            const canvas = await html2canvas(cardRef.current, {
-                backgroundColor: "#fff1f2",
-                scale: 2,
-                useCORS: true,
-                allowTaint: false,
-                logging: false,
-                onclone: (clonedDoc) => {
-                    const element = clonedDoc.getElementById('valentine-card-capture');
-                    if (element) {
-                        element.style.transform = 'none';
-                        element.style.animation = 'none';
-                    }
+            const scale = 2; // Better resolution
+            const options = {
+                height: cardRef.current.offsetHeight * scale,
+                width: cardRef.current.offsetWidth * scale,
+                style: {
+                    transform: `scale(${scale})`,
+                    transformOrigin: 'top left',
+                    width: cardRef.current.offsetWidth + "px",
+                    height: cardRef.current.offsetHeight + "px"
                 }
-            });
+            };
 
-            const image = canvas.toDataURL("image/png", 1.0);
+            const dataUrl = await domtoimage.toPng(cardRef.current, options);
+
             const link = document.createElement('a');
-            link.href = image;
+            link.href = dataUrl;
             link.download = `valentine-${name.trim().replace(/\s+/g, '-').toLowerCase() || 'message'}.png`;
 
             document.body.appendChild(link);
@@ -69,7 +67,7 @@ const MessageGenerator = () => {
 
         } catch (error) {
             console.error("Image Download Error:", error);
-            alert("Sorry, there was an error saving the image. Please try again.");
+            alert(`Error: ${error.message || "Could not save image"}. Please try taking a screenshot instead!`);
         } finally {
             setIsDownloading(false);
         }
